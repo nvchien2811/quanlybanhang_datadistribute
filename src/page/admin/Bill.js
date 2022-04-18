@@ -9,26 +9,31 @@ const { Option } = Select;
 
 function Bill(props){
     const [formadd] = Form.useForm();
+    const [formaddBillDetail] = Form.useForm();
     const [visibleAddBill, setvisibleAddBill] = useState(false);
+    const [visibleAddBillDetail, setvisibleAddBilDetail] = useState(false);
     const [dataSourceBill, setdataSourceBill] = useState([]);
-    // const [MCN, setMCN] = useState("full")
     const [loadingTable, setloadingTable] = useState(false)
+    const [loadingTable2, setloadingTable2] = useState(false)
     const [SelectCode, setSelectCode] = useState([]);
     const [showmodalContent, setshowmodalContent] = useState(false);
+    const [dataproduct, setdataproduct] = useState([]);
+    const [arritemBill, setarritemBill] = useState([]);
+    const [totalBill, settotalBill] = useState(0);
     
-    // const handleChangeSelect = (e)=>{
-    //     setMCN(e);
-    //     console.log(props.MCN)
-    // }
     const onFinishAddBill = async()=>{
-        let obj = {MCN:props.MCN,...formadd.getFieldValue()}
+        let obj = {MCN:props.MCN,...formadd.getFieldValue(), arritemBill}
         console.log(obj)
         const res = await FetchAPI.postDataAPI("/bill/addBill",obj);
         if(res.msg){
             if(res.msg==="Success"){
                 message.success("Thêm hóa đơn thành công !!!");
-                formadd.setFieldsValue({MAKH:null,MANV:null,SOHD:null,MAKHO:null, TRIGIA:null});
+                formadd.setFieldsValue({MAKH:null,MANV:null,MAKHO:null, TRIGIA:null});
+                formaddBillDetail.setFieldsValue({MASP:null, SL:0 })
+                settotalBill(0);
+                setvisibleAddBilDetail(false);
                 setvisibleAddBill(false);
+                
             }else{
                 message.error("Có lỗi rồi");
                  setvisibleAddBill(false);
@@ -37,24 +42,32 @@ function Bill(props){
     }
     useEffect(()=>{
         setloadingTable(true);
-        formadd.setFieldsValue({MAKH:null,MANV:null,SOHD:null,MAKHO:null, TRIGIA:null});
+        formadd.setFieldsValue({MAKH:null,MANV:null,MAKHO:null, TRIGIA:null});
         getBill();
         getCode();
+        getProduct();
 
     },[props.MCN])
 
     const getBill = async()=>{
         const res = await FetchAPI.postDataAPI("/bill/getBill",{"MCN":props.MCN});
-        console.log(res)
+        // console.log(res)
         setdataSourceBill(res.msg.recordsets[0]);
         setloadingTable(false);
     }
 
+
     const getCode = async()=>{
         const res = await FetchAPI.postDataAPI("/bill/getCode",{"MCN":props.MCN});
-        console.log(res.msg.recordsets)
+        // console.log(res.msg.recordsets)
         setSelectCode(res.msg.recordsets)
         setshowmodalContent(true);
+        
+    }
+    const getProduct = async()=>{
+        const res = await FetchAPI.postDataAPI("/bill/getProduct",{"MCN":props.MCN});
+        console.log(res.msg.recordsets[0]);
+        setdataproduct(res.msg.recordsets[0])
         
     }
       
@@ -129,6 +142,80 @@ function Bill(props){
             </Select>
             )
     }
+    const SelectProduct = (SelectCode)=>{
+        return(
+            <Select placeholder='Chọn sản phẩm'>
+                {SelectCode.map((item)=>(
+                    <Option key={item.MASP} value={item.MASP}>{item.TENSP} ({item.NUOCSX})</Option>
+                ))}            
+            </Select>
+            )
+    }
+    const addItemBill = ()=>{
+        setloadingTable2(true);
+        let valu = formaddBillDetail.getFieldValue();
+        let arr = arritemBill;
+        let data = dataproduct;
+        
+        if(arr.length == 0){
+            const b = data.find((a)=>a.MASP === valu.MASP); 
+            const SL = valu.SL; 
+            b.SL = SL;
+            arr.push(b);
+        }else{
+            const checkitem = arr.some((item)=>item.MASP === valu.MASP);
+            if(checkitem){
+                const add = arr.findIndex((x)=> x.MASP === valu.MASP);
+                arr[add].SL += valu.SL;
+            }else{
+                const b = data.find((a)=>a.MASP === valu.MASP); 
+                const SL = valu.SL; 
+                b.SL = SL;
+                arr.push(b);;
+            }
+        }
+        
+        setarritemBill(arr);
+        let s=0;
+        arr.map((e,index)=>{s+=(e.SL*e.GIA);if(index===arr.length-1){settotalBill(s)}});
+        setloadingTable2(false);
+       
+        formaddBillDetail.setFieldsValue({MASP:null, SL:1 })
+    }
+
+    const columnsBillDetaij = [
+        {
+          title: 'Sản phẩm',
+          dataIndex: 'TENSP',
+          key: 'TENSP',
+          render: (text,record) =>(
+              <div>
+                  <span>{text}</span>
+              </div>
+          )
+        },
+        {
+          title: 'Đơn giá',
+          dataIndex: 'GIA',
+          key: 'GIA',
+          render: (text,record)=>(
+              <span>{text}</span>
+          )
+        },
+        {
+          title: 'Số lượng',
+          dataIndex: 'SL',
+          key: 'SL',
+        },
+        {
+            title: 'Thành tiền',
+            dataIndex: 'GIA',
+            key: 'GIA',
+            render: (text,record)=>(
+                <span>{`${getPrice(record.SL*record.GIA)} đ`}</span>
+            )
+        },
+    ];
 
     return(
         <div className="wrapperBill">
@@ -144,20 +231,13 @@ function Bill(props){
                     <PlusCircleOutlined />
                         Thêm hóa đơn
                 </Button>:
-                <Button type="primary" danger onClick={()=>setvisibleAddBill(true)}>
+                <Button type="primary" danger onClick={()=>setvisibleAddBilDetail(true)}>
                     <PlusCircleOutlined />
                     Thêm hóa đơn
                 </Button>
                 }
 
             </div>
-            {/* <h2> Chọn chi nhánh </h2>
-            <Select defaultValue="full" onChange={handleChangeSelect}>
-                <Option value="full">Tất cả chi nhánh</Option>
-                <Option value="CN1">Chi nhánh 1</Option>
-                <Option value="CN2">Chi nhánh 2</Option>
-                <Option value="CN3">Chi nhánh 3</Option>
-            </Select> */}
             <Table 
                 dataSource={dataSourceBill} 
                 columns={columnsBill}
@@ -166,7 +246,7 @@ function Bill(props){
             />
             {showmodalContent &&
             <Drawer 
-                title="Thêm hóa đơn"
+                title="Thu ngân"
                 placement="right" 
                 onClose={()=>setvisibleAddBill(false)} 
                 visible={visibleAddBill}
@@ -202,7 +282,7 @@ function Bill(props){
                     >
                       {SelectCodeKho(SelectCode)}
                     </Form.Item>
-                    <Form.Item
+                    {/* <Form.Item
                         label="Mã hóa đơn"
                         name="SOHD"
                         rules={[{ required: true, message: 'Vui lòng nhập mã hóa đơn!' }]}
@@ -210,7 +290,7 @@ function Bill(props){
                         <Input
                             placeholder="Nhập mã hóa đơn"
                         />
-                    </Form.Item>
+                    </Form.Item> */}
 
                     <Form.Item
                         label="Đơn giá"
@@ -236,6 +316,90 @@ function Bill(props){
                 </Form>
             </Drawer>
             }
+            {/* ADD BILL DETAIL */}
+            <Drawer 
+                title="Thêm hóa đơn"
+                placement="left" 
+                onClose={()=>setvisibleAddBilDetail(false)} 
+                visible={visibleAddBillDetail}
+                width={1000}
+            >
+                <div className="addBillDetail">
+                    <div className="tableBillDetail">
+                        <Form
+                        name="basic"
+                        labelCol={{ span: 8 }}
+                        wrapperCol={{ span: 16 }}
+                        onFinish={addItemBill}
+                        autoComplete="off"
+                        form={formaddBillDetail}
+                        style={{ width: '90%' }}
+                        >
+                    
+                            <Form.Item
+                                label="Chọn sản phẩm"
+                                name="MASP"
+                                rules={[{ required: true, message: 'Vui lòng chọn sản phẩm!' }]}
+                            >
+                                {SelectProduct(dataproduct)}
+                            </Form.Item>
+                            <Form.Item
+                                label="Số lượng"
+                                name="SL"
+                                rules={[{ required: true, message: 'Vui lòng nhập số lượng!' }]}
+                            >
+                                <InputNumber
+                                    placeholder="Số lượng"
+                                    formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                    parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                                    min={0}
+                                    style={{ width:"100%" }}
+                                />
+                            </Form.Item>
+                            <Form.Item 
+                                wrapperCol={{ offset: 8, span: 16 }}
+                                style={{display:'flex' }}
+                            >
+                                <Button danger type="primary" htmlType="submit">
+                                    Thêm vào hóa đơn
+                                </Button>
+                            </Form.Item>
+                        </Form>
+                    </div>
+                    <div className='addtableBill'>
+                    {!loadingTable2 &&
+                    <Table 
+                        dataSource={arritemBill} 
+                        columns={columnsBillDetaij}
+                        className="tableBillDetaill"
+                        loading={loadingTable2}
+                    />
+                    }
+                    <div style={{ marginTop:20,marginLeft:10 }}>
+                        <Button danger  type="primary" 
+                        onClick={()=>{
+                            if(arritemBill.length === 0){
+                                notification["warning"]({
+                                    message: 'Thông báo',
+                                    description:
+                                    'Vui lòng chọn sản phẩm trước khi thanh toán.',
+                                    })
+                            }else{
+                                formadd.setFieldsValue({MAKH:null,MANV:null,MAKHO:null, TRIGIA:totalBill});
+                                setvisibleAddBill(true)
+                            }
+                            }}>
+                            Thanh toán
+                        </Button>
+                        <h3 style={{ display:'inline', marginLeft: 20 }}>Tổng :</h3>
+                        <span style={{ marginLeft:10,color:'red' }}>{getPrice(totalBill) + " đ"}</span>
+
+                    </div>
+                    </div>
+                  
+
+                </div>
+            </Drawer>
         </div>
     )
 }
