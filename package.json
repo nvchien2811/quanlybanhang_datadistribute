@@ -2,15 +2,10 @@
   "name": "quanlybanhang",
   "version": "0.1.0",
   "private": true,
-<<<<<<< HEAD
   "proxy": "http://localhost:5000",
   "dependencies": {
     "@ant-design/icons": "^4.7.0",
     "@ant-design/plots": "^1.0.9",
-=======
-  "dependencies": {
-    "@ant-design/icons": "^4.7.0",
->>>>>>> e5d7c933f05aeb945f9e42753fd57fdd59525686
     "@testing-library/jest-dom": "^5.16.2",
     "@testing-library/react": "^12.1.4",
     "@testing-library/user-event": "^13.5.0",
