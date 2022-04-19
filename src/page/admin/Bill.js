@@ -70,6 +70,22 @@ function Bill(props){
         setdataproduct(res.msg.recordsets[0])
         
     }
+    const DeleteItem = (ID)=>{
+        setloadingTable2(true);
+        const data  = arritemBill;
+        const index = data.findIndex(x=>x.MASP === ID);
+        if(index!==-1){
+            data.splice(index,1);
+            console.log(data);
+            setarritemBill(data);
+            let s=0;
+            data.map((e,index)=>{s+=(e.SL*e.GIA);if(index===data.length-1){settotalBill(s)}});
+        }else{
+            setloadingTable2(false);
+        }
+       
+       
+    }
       
       const columnsBill = [
         {
@@ -155,8 +171,7 @@ function Bill(props){
         setloadingTable2(true);
         let valu = formaddBillDetail.getFieldValue();
         let arr = arritemBill;
-        let data = dataproduct;
-        
+        let data = dataproduct;        
         if(arr.length == 0){
             const b = data.find((a)=>a.MASP === valu.MASP); 
             const SL = valu.SL; 
@@ -215,6 +230,22 @@ function Bill(props){
                 <span>{`${getPrice(record.SL*record.GIA)} đ`}</span>
             )
         },
+        // {
+        //     title: 'Xóa sản phẩm',
+        //     // dataIndex: 'action',
+        //     key: 'action',
+        //     render: (text,record)=>(
+        //         <Button  type="primary" 
+        //         onClick={()=>{
+        //             console.log(record.MASP)
+        //             DeleteItem(record.MASP);
+                
+        //         }}>
+        //             Xóa
+        //     </Button>
+        //     )
+        // },
+
     ];
 
     return(
